@@ -1,0 +1,1 @@
+/usr/bin/c++  -g   CMakeFiles/lock_free_queue.dir/main.cpp.o  -o lock_free_queue 

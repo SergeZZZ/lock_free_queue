@@ -1,0 +1,3 @@
+/workspaces/lock_free_queue/build/CMakeFiles/lock_free_queue.dir
+/workspaces/lock_free_queue/build/CMakeFiles/edit_cache.dir
+/workspaces/lock_free_queue/build/CMakeFiles/rebuild_cache.dir

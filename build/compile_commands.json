@@ -1,0 +1,8 @@
+[
+{
+  "directory": "/workspaces/lock_free_queue/build",
+  "command": "/usr/bin/c++ -O3 -DNDEBUG -std=gnu++23 -Wall -o CMakeFiles/lock_free_queue.dir/main.cpp.o -c /workspaces/lock_free_queue/main.cpp",
+  "file": "/workspaces/lock_free_queue/main.cpp",
+  "output": "CMakeFiles/lock_free_queue.dir/main.cpp.o"
+}
+]
