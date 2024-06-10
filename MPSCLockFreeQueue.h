@@ -17,7 +17,7 @@ constexpr std::uint8_t CalcMask(const std::size_t num) noexcept {
   assert((num & mask) == 0);  // check if power of 2
   return mask;
 }
-template <typename T = int>
+template<typename T = int>
 struct MPSCLockFreeQueue  //: private boost::noncopyable
 {
   using Type = T;
@@ -32,15 +32,18 @@ struct MPSCLockFreeQueue  //: private boost::noncopyable
 
   Block Reserve(const std::size_t num) noexcept {
     Block res{0, 0};
-    std::size_t prev_writer_head, new_writer_head;
-    std::size_t num_items_to_reserve = 0;
-    do {
-      prev_writer_head = writer_head_.load(std::memory_order_acquire);
+    std::size_t new_writer_head, num_items_to_reserve = 0;
+    std::size_t prev_writer_head = writer_head_.load(std::memory_order_acquire);
+
+    while (true) {
       const auto current_reader_pos =
           reader_tail_.load(std::memory_order_acquire);
+
       if (current_reader_pos > prev_writer_head) {
-        continue;  // we are already behind
+        prev_writer_head = writer_head_.load(std::memory_order_acquire);
+        continue;  // we are already behind, reread the value, avoid cmpexchange
       }
+
       if (prev_writer_head - current_reader_pos == capacity_) {
         assert(prev_writer_head - current_reader_pos == capacity_);
         return res;  // we are full
@@ -49,9 +52,13 @@ struct MPSCLockFreeQueue  //: private boost::noncopyable
           capacity_ - (prev_writer_head - current_reader_pos);
       num_items_to_reserve = std::min(max_available_elems, num);
       new_writer_head = prev_writer_head + num_items_to_reserve;
-    } while (!writer_head_.compare_exchange_weak(
-        prev_writer_head, new_writer_head, std::memory_order_release,
-        std::memory_order_relaxed));
+
+      if (writer_head_.compare_exchange_weak(
+          prev_writer_head, new_writer_head, std::memory_order_release,
+          std::memory_order_relaxed)) {
+        break;
+      }
+    }
     res.seq_no_ = prev_writer_head;
     res.count_ = num_items_to_reserve;
     return res;
@@ -74,7 +81,7 @@ struct MPSCLockFreeQueue  //: private boost::noncopyable
     return storage_[CalcRealPos(index)];
   }
 
-  template <typename ProcFunc>
+  template<typename ProcFunc>
   // requires std::is_nothrow_invocable_v<ProcFunc>
   std::size_t Read(std::size_t n, ProcFunc &&process_func) {
     assert(n > 0);
