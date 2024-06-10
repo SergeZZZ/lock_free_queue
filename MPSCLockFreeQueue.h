@@ -17,20 +17,20 @@ constexpr std::uint8_t CalcMask(const std::size_t num) noexcept {
   assert((num & mask) == 0);  // check if power of 2
   return mask;
 }
-
+template <typename T = int>
 struct MPSCLockFreeQueue  //: private boost::noncopyable
 {
-  using Type = int;
+  using Type = T;
   explicit MPSCLockFreeQueue(const std::size_t capacity)
       : capacity_(capacity), mask_(CalcMask(capacity)) {
     storage_.resize(capacity_);
   }
 
-  constexpr auto CalcRealPos(const std::size_t pos) const {
+  constexpr auto CalcRealPos(const std::size_t pos) const noexcept {
     return pos & mask_;
   }
 
-  Block Reserve(const std::size_t num) {
+  Block Reserve(const std::size_t num) noexcept {
     Block res{0, 0};
     std::size_t prev_writer_head, new_writer_head;
     std::size_t num_items_to_reserve = 0;
@@ -38,7 +38,11 @@ struct MPSCLockFreeQueue  //: private boost::noncopyable
       prev_writer_head = writer_head_.load(std::memory_order_acquire);
       const auto current_reader_pos =
           reader_tail_.load(std::memory_order_acquire);
-      if (prev_writer_head - current_reader_pos >= capacity_) {
+      if (current_reader_pos > prev_writer_head) {
+        continue;  // we are already behind
+      }
+      if (prev_writer_head - current_reader_pos == capacity_) {
+        assert(prev_writer_head - current_reader_pos == capacity_);
         return res;  // we are full
       }
       const auto max_available_elems =
@@ -53,7 +57,7 @@ struct MPSCLockFreeQueue  //: private boost::noncopyable
     return res;
   }
 
-  void Commit(const Block items) {
+  void Commit(const Block items) noexcept {
     assert(items.count_);
     std::size_t prev_writer_tail;
     // wait till all prev writers finish
@@ -72,7 +76,7 @@ struct MPSCLockFreeQueue  //: private boost::noncopyable
 
   template <typename ProcFunc>
   // requires std::is_nothrow_invocable_v<ProcFunc>
-  void Read(std::size_t n, ProcFunc &&process_func) {
+  std::size_t Read(std::size_t n, ProcFunc &&process_func) {
     assert(n > 0);
     const auto writer_tail = writer_tail_.load(std::memory_order_acquire);
     const auto reader_tail = reader_tail_.load(std::memory_order_acquire);
@@ -82,7 +86,17 @@ struct MPSCLockFreeQueue  //: private boost::noncopyable
       process_func(Get(reader_tail + i));
     }
     reader_tail_.fetch_add(items_to_read);
+    return items_to_read;
   }
+
+  std::size_t Size() const noexcept {
+    const auto writer_tail = writer_tail_.load(std::memory_order_acquire);
+    const auto reader_tail = reader_tail_.load(std::memory_order_acquire);
+    const auto available_items = writer_tail - reader_tail;
+    return available_items;
+  }
+
+  std::size_t GetCapacity() const noexcept { return capacity_; }
 
   std::size_t capacity_;  // must be power of 2
   std::size_t mask_;

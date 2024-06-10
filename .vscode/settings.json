@@ -44,7 +44,13 @@
         "stdexcept": "cpp",
         "streambuf": "cpp",
         "typeinfo": "cpp",
-        "thread": "cpp"
+        "thread": "cpp",
+        "ctime": "cpp",
+        "chrono": "cpp",
+        "ratio": "cpp",
+        "semaphore": "cpp",
+        "stop_token": "cpp"
     },
-    "editor.tabSize": 2
+    "editor.tabSize": 2,
+    "clang-format.fallbackStyle": "Google"
 }
