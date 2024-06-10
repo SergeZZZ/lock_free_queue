@@ -148,12 +148,7 @@ int main()
     ++coreId;
     std::jthread write_thread1(
         [&queue, coreId]() { WriterThread(queue, coreId); });
-    ++coreId;
-    std::jthread write_thread2(
-        [&queue, coreId]() { WriterThread(queue, coreId); });
-    ++coreId;
-    std::jthread write_thread3(
-        [&queue, coreId]() { WriterThread(queue, coreId); }); }, "Test with 1 writer");
+ }, "Test with 1 writer");
 
   TestAndPrint([](QueueType &queue)
                {  
